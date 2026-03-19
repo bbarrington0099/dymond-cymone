@@ -1,0 +1,142 @@
+.widget {
+  border-radius: var(--radii-md);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.55);
+  padding: var(--spacing-md);
+  margin-top: var(--spacing-xl);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--primary-color, #111);
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.pagerBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radii-md);
+  border: 1px solid var(--tertiary-color, #ddd);
+  background: var(--secondary-color, #fff);
+  color: var(--primary-color, #111);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.pagerBtnDisabled {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radii-md);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.03);
+  color: var(--primary-color, #555);
+}
+
+.pagerText {
+  color: var(--primary-color, #333);
+  font-size: 0.95rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+}
+
+@media (min-width: 720px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.card {
+  border-radius: var(--radii-md);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  padding: var(--spacing-sm);
+  background: rgba(255, 255, 255, 0.6);
+  display: grid;
+  grid-template-columns: 82px 1fr;
+  gap: var(--spacing-sm);
+}
+
+.artWrap {
+  width: 82px;
+}
+
+.art {
+  width: 82px;
+  height: 82px;
+  border-radius: var(--radii-md);
+  object-fit: cover;
+  display: block;
+}
+
+.artFallback {
+  width: 82px;
+  height: 82px;
+  border-radius: var(--radii-md);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.cardBody {
+  min-width: 0;
+}
+
+.releaseLink {
+  color: var(--primary-color, #111);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.releaseLink:hover {
+  text-decoration: underline;
+}
+
+.releaseType {
+  margin-top: 4px;
+  color: var(--primary-color, #666);
+  font-size: 0.9rem;
+}
+
+.tracks {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.trackItem {
+  min-width: 0;
+}
+
+.trackLink {
+  color: var(--primary-color, #333);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.trackLink:hover {
+  text-decoration: underline;
+}
+

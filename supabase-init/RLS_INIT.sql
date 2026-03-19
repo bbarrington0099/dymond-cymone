@@ -91,41 +91,68 @@ ON CONFLICT (id) DO UPDATE SET
   allowed_mime_types = EXCLUDED.allowed_mime_types;
 
 -- ----------------------------------------------------------------------------
--- Storage policies (per bucket, path format: {ownerUserId}/{fileName})
+-- Storage policies — one set per bucket
+-- Path format: {ownerUserId}/{fileName}
 -- ----------------------------------------------------------------------------
 
--- Public read on all three buckets
-DROP POLICY IF EXISTS "Storage_public_select" ON storage.objects;
-CREATE POLICY "Storage_public_select" ON storage.objects
-  FOR SELECT USING (bucket_id IN ('artist-covers', 'artist-event-thumbs', 'artist-favicons'));
+DO $$
+DECLARE
+  b TEXT;
+BEGIN
+  FOREACH b IN ARRAY ARRAY['artist-covers', 'artist-event-thumbs', 'artist-favicons']
+  LOOP
 
--- Insert: authenticated, first folder must match auth.uid()::text
-DROP POLICY IF EXISTS "Storage_authenticated_insert" ON storage.objects;
-CREATE POLICY "Storage_authenticated_insert" ON storage.objects
-  FOR INSERT TO authenticated
-  WITH CHECK (
-    bucket_id IN ('artist-covers', 'artist-event-thumbs', 'artist-favicons')
-    AND (storage.foldername(name))[1] = auth.uid()::text
-  );
+    EXECUTE 'DROP POLICY IF EXISTS "storage_' || b || '_select" ON storage.objects';
+    EXECUTE 'DROP POLICY IF EXISTS "storage_' || b || '_insert" ON storage.objects';
+    EXECUTE 'DROP POLICY IF EXISTS "storage_' || b || '_update" ON storage.objects';
+    EXECUTE 'DROP POLICY IF EXISTS "storage_' || b || '_delete" ON storage.objects';
 
--- Update: same rule as insert (owner only)
-DROP POLICY IF EXISTS "Storage_authenticated_update" ON storage.objects;
-CREATE POLICY "Storage_authenticated_update" ON storage.objects
-  FOR UPDATE TO authenticated
-  USING (
-    bucket_id IN ('artist-covers', 'artist-event-thumbs', 'artist-favicons')
-    AND (storage.foldername(name))[1] = auth.uid()::text
-  )
-  WITH CHECK (
-    bucket_id IN ('artist-covers', 'artist-event-thumbs', 'artist-favicons')
-    AND (storage.foldername(name))[1] = auth.uid()::text
-  );
+    -- Also clean up the old shared policies (safe to repeat)
+    EXECUTE 'DROP POLICY IF EXISTS "Storage_public_select" ON storage.objects';
+    EXECUTE 'DROP POLICY IF EXISTS "Storage_authenticated_insert" ON storage.objects';
+    EXECUTE 'DROP POLICY IF EXISTS "Storage_authenticated_update" ON storage.objects';
+    EXECUTE 'DROP POLICY IF EXISTS "Storage_authenticated_delete" ON storage.objects';
 
--- Delete: owner only
-DROP POLICY IF EXISTS "Storage_authenticated_delete" ON storage.objects;
-CREATE POLICY "Storage_authenticated_delete" ON storage.objects
-  FOR DELETE TO authenticated
-  USING (
-    bucket_id IN ('artist-covers', 'artist-event-thumbs', 'artist-favicons')
-    AND (storage.foldername(name))[1] = auth.uid()::text
-  );
+    EXECUTE format(
+      'CREATE POLICY "storage_%s_select" ON storage.objects
+         FOR SELECT USING (bucket_id = %L)',
+      b, b
+    );
+
+    EXECUTE format(
+      'CREATE POLICY "storage_%s_insert" ON storage.objects
+         FOR INSERT TO authenticated
+         WITH CHECK (
+           bucket_id = %L
+           AND (storage.foldername(name))[1] = auth.uid()::text
+         )',
+      b, b
+    );
+
+    EXECUTE format(
+      'CREATE POLICY "storage_%s_update" ON storage.objects
+         FOR UPDATE TO authenticated
+         USING (
+           bucket_id = %L
+           AND (storage.foldername(name))[1] = auth.uid()::text
+         )
+         WITH CHECK (
+           bucket_id = %L
+           AND (storage.foldername(name))[1] = auth.uid()::text
+         )',
+      b, b, b
+    );
+
+    EXECUTE format(
+      'CREATE POLICY "storage_%s_delete" ON storage.objects
+         FOR DELETE TO authenticated
+         USING (
+           bucket_id = %L
+           AND (storage.foldername(name))[1] = auth.uid()::text
+         )',
+      b, b
+    );
+
+  END LOOP;
+END;
+$$;

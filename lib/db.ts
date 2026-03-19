@@ -17,10 +17,12 @@ export async function createArtistProfile(
 	let supabaseUserId: string | undefined;
 
 	if (plainPassword) {
-		// Check if auth user already exists
+		// Check if auth user already exists (by id or by email — seed passes email)
 		const { data: existingUsers } = await supabase.auth.admin.listUsers();
 		const existingAuth = existingUsers?.users?.find(
-			(u) => u.id === userData.ownerUserId
+			(u) =>
+				u.id === userData.ownerUserId ||
+				u.email?.toLowerCase() === String(userData.ownerUserId).toLowerCase()
 		);
 
 		if (existingAuth) {
@@ -42,19 +44,29 @@ export async function createArtistProfile(
 			supabaseUserId = authData.user.id;
 		}
 	} else {
-		// No plainPassword (e.g. OAuth user being synced) — look up auth user by email
-		// so we always use Supabase auth ID for new users
+		// No plainPassword — look up auth user by id or email
 		const { data: existingUsers } = await supabase.auth.admin.listUsers();
 		const existingAuth = existingUsers?.users?.find(
-			(u) => u.id === userData.ownerUserId
+			(u) =>
+				u.id === userData.ownerUserId ||
+				u.email?.toLowerCase() === String(userData.ownerUserId).toLowerCase()
 		);
 		if (existingAuth) {
 			supabaseUserId = existingAuth.id;
 		}
 	}
-    
-    try {
-        return await prisma.artistProfile.create({
+
+	if (!supabaseUserId) {
+		throw new Error('Could not resolve Supabase user (create user with password or pass existing user id/email).');
+	}
+
+	try {
+		const existing = await prisma.artistProfile.findUnique({
+			where: { ownerUserId: supabaseUserId },
+		});
+		if (existing) return existing;
+
+		return await prisma.artistProfile.create({
             data: {
                 ownerUserId: supabaseUserId as string,
                 name: userData.name,
