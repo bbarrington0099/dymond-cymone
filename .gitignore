@@ -1,0 +1,11 @@
+/node_modules
+/.next/
+
+.env*
+
+next-env.d.ts
+
+/generated/prisma
+/prisma/migrations
+/certificates
+.vscode/settings.json

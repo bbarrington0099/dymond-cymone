@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "paths": {
+            "@components/*": ["./app/_components/*"],
+            "@common/*": ["./app/_components/common/*"],
+            "@actions/*": ["./app/_actions/*"],
+            "@lib/*": ["./lib/*"],
+            "@prismagen/*": ["./generated/prisma/*"],
+            "@prisma/*": ["./node_modules/@prisma/*"],
+            "@/*": ["./*"]
+        }
+    }
+}
