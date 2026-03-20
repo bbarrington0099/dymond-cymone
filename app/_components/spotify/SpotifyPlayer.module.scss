@@ -21,31 +21,7 @@
 .embed {
   display: block;
   width: 100%;
-  min-height: 352px;
+  min-height: 152px;
   border: none;
 }
 
-.error {
-  margin: 0 0 var(--spacing-sm) 0;
-  padding: var(--spacing-sm);
-  border-radius: var(--radii-md);
-  background: rgba(255, 100, 100, 0.15);
-  color: #c00;
-  font-size: 0.9rem;
-}
-
-.sdkWrap {
-  padding: var(--spacing-md) 0;
-}
-
-.sdkStatus {
-  margin: 0;
-  font-size: 1rem;
-  color: var(--primary-color, #111);
-}
-
-.sdkHint {
-  margin: var(--spacing-sm) 0 0 0;
-  font-size: 0.9rem;
-  color: var(--primary-color, #666);
-}

@@ -11,6 +11,7 @@ export default function AdminButton({
   initialCoverImagePath,
   initialTheme,
   initialEvents,
+  initialSpotifyTrackIds,
 }: {
   initialDescription: string;
   initialCoverImagePath: string;
@@ -22,6 +23,7 @@ export default function AdminButton({
     themeSecondaryFontCssLink: string;
   };
   initialEvents: ArtistEventPayload[];
+  initialSpotifyTrackIds: string[];
 }) {
   const [open, setOpen] = useState(false);
 
@@ -48,6 +50,7 @@ export default function AdminButton({
             initialCoverImagePath={initialCoverImagePath}
             initialTheme={initialTheme}
             initialEvents={initialEvents}
+            initialSpotifyTrackIds={initialSpotifyTrackIds}
           />
         </Suspense>
       )}

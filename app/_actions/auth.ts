@@ -31,6 +31,6 @@ export async function loginWithCredentials(
 export async function logout() {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
-  redirect('/artist');
+  redirect('/');
 }
 

@@ -1,7 +1,7 @@
 'use server';
 
 import { unstable_cache } from 'next/cache';
-import { revalidateTag } from 'next/cache';
+import { revalidateTag, revalidatePath } from 'next/cache';
 import { prisma } from '@lib/prisma';
 import { CACHE_TAGS, CACHE_LIFE } from '@lib/constants';
 import { requireAuth } from '@lib/auth';
@@ -22,6 +22,7 @@ export type ArtistProfilePayload = {
   themeFavPath: string;
   spotifyArtistId: string;
   spotifyPlaylistId: string;
+  spotifyTrackIds: string[];
 };
 
 export type ArtistEventPayload = {
@@ -45,7 +46,12 @@ export async function getArtistProfile(): Promise<ArtistProfilePayload | null> {
       const profile = await prisma.artistProfile.findFirst({
         orderBy: { createdAt: 'asc' },
       });
-      return profile;
+      if (!profile) return null;
+      const p = profile as { spotifyTrackIds?: string[] };
+      return {
+        ...profile,
+        spotifyTrackIds: p.spotifyTrackIds ?? [],
+      };
     },
     ['artist-profile'],
     {
@@ -117,7 +123,8 @@ export async function updateArtistDescriptionFromFormData(formData: FormData) {
     where: { ownerUserId: profile.ownerUserId },
     data: { description },
   });
-  revalidateTag(CACHE_TAGS.ARTIST_PROFILE, CACHE_LIFE.USER);
+  revalidateTag(CACHE_TAGS.ARTIST_PROFILE, 'max');
+  revalidatePath('/');
   redirect('/');
 }
 
@@ -146,7 +153,8 @@ export async function updateArtistTheme(formData: FormData) {
     },
   });
 
-  revalidateTag(CACHE_TAGS.ARTIST_PROFILE, CACHE_LIFE.USER);
+  revalidateTag(CACHE_TAGS.ARTIST_PROFILE, 'max');
+  revalidatePath('/');
   redirect('/');
 }
 
@@ -177,7 +185,8 @@ export async function createArtistEvent(formData: FormData) {
     },
   });
 
-  revalidateTag(CACHE_TAGS.ARTIST_EVENTS, CACHE_LIFE.USER);
+  revalidateTag(CACHE_TAGS.ARTIST_EVENTS, 'max');
+  revalidatePath('/');
   redirect('/');
 }
 
@@ -222,7 +231,8 @@ export async function updateArtistEvent(formData: FormData) {
     },
   });
 
-  revalidateTag(CACHE_TAGS.ARTIST_EVENTS, CACHE_LIFE.USER);
+  revalidateTag(CACHE_TAGS.ARTIST_EVENTS, 'max');
+  revalidatePath('/');
   redirect('/');
 }
 
@@ -244,7 +254,8 @@ export async function deleteArtistEvent(formData: FormData) {
   }
 
   await prisma.artistEvent.delete({ where: { id } });
-  revalidateTag(CACHE_TAGS.ARTIST_EVENTS, CACHE_LIFE.USER);
+  revalidateTag(CACHE_TAGS.ARTIST_EVENTS, 'max');
+  revalidatePath('/');
   redirect('/');
 }
 
@@ -262,7 +273,8 @@ export async function setArtistCoverImagePath(imagePath: string) {
     data: { coverImagePath: nextPath },
   });
 
-  revalidateTag(CACHE_TAGS.ARTIST_PROFILE, CACHE_LIFE.USER);
+  revalidateTag(CACHE_TAGS.ARTIST_PROFILE, 'max');
+  revalidatePath('/');
   return { success: true };
 }
 
@@ -279,7 +291,8 @@ export async function deleteArtistCoverImage() {
     data: { coverImagePath: '' },
   });
 
-  revalidateTag(CACHE_TAGS.ARTIST_PROFILE, CACHE_LIFE.USER);
+  revalidateTag(CACHE_TAGS.ARTIST_PROFILE, 'max');
+  revalidatePath('/');
   return { success: true };
 }
 
@@ -305,6 +318,49 @@ export async function deleteArtistEventThumbnail(eventId: string) {
     data: { imagePath: '' },
   });
 
-  revalidateTag(CACHE_TAGS.ARTIST_EVENTS, CACHE_LIFE.USER);
+  revalidateTag(CACHE_TAGS.ARTIST_EVENTS, 'max');
+  revalidatePath('/');
   return { success: true };
+}
+
+/** Extract Spotify track ID from URL (open.spotify.com/track/xxx) or raw ID. */
+function parseSpotifyTrackId(input: string): string | null {
+  const s = (input ?? '').trim();
+  if (!s) return null;
+  const match = s.match(/track\/([a-zA-Z0-9]+)/);
+  if (match) return match[1];
+  if (/^[a-zA-Z0-9]{22}$/.test(s)) return s;
+  return null;
+}
+
+export async function addSpotifyTrackId(formData: FormData) {
+  const profile = await getOwnedProfileOrThrow();
+  const raw = String(formData.get('trackId') ?? '').trim();
+  const trackId = parseSpotifyTrackId(raw);
+  if (!trackId) throw new Error('Invalid track ID or URL. Use a Spotify track link or 22-character ID.');
+
+  const current = (profile.spotifyTrackIds ?? []) as string[];
+  if (current.includes(trackId)) return;
+  await prisma.artistProfile.update({
+    where: { ownerUserId: profile.ownerUserId },
+    data: { spotifyTrackIds: [...current, trackId] },
+  });
+  revalidateTag(CACHE_TAGS.ARTIST_PROFILE, 'max');
+  revalidatePath('/');
+  redirect('/');
+}
+
+export async function removeSpotifyTrackId(formData: FormData) {
+  const profile = await getOwnedProfileOrThrow();
+  const trackId = String(formData.get('trackId') ?? '').trim();
+  if (!trackId) throw new Error('trackId is required.');
+
+  const current = ((profile.spotifyTrackIds ?? []) as string[]).filter((id) => id !== trackId);
+  await prisma.artistProfile.update({
+    where: { ownerUserId: profile.ownerUserId },
+    data: { spotifyTrackIds: current },
+  });
+  revalidateTag(CACHE_TAGS.ARTIST_PROFILE, 'max');
+  revalidatePath('/');
+  redirect('/');
 }

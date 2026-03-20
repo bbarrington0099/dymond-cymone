@@ -1,30 +1,29 @@
 import { getArtistProfile, getArtistEvents } from '@actions/artist';
+import { getRandomTopTrackId, getSpotifyArtist } from '@actions/spotify';
 import styles from './page.module.scss';
 import { Suspense } from 'react';
 import AdminGate from '@components/admin/AdminGate';
 import { renderFormattedText } from '@lib/react/renderFormattedText';
-import DiscographyWidget, { DiscographySkeleton } from '@components/spotify/DiscographyWidget';
+import DiscographyClient from '@components/spotify/DiscographyClient';
+import { DiscographySkeleton } from '@components/spotify/DiscographyWidget';
 import SpotifyPlayer from '@components/spotify/SpotifyPlayer';
 
-async function DiscographySection({
-  searchParams,
+async function SpotifyPlayerSection({
+  spotifyTrackIds,
   spotifyArtistId,
 }: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined>;
+  spotifyTrackIds: string[];
   spotifyArtistId: string;
 }) {
-  const sp = searchParams ? await searchParams : undefined;
-  const discographyPageRaw = sp?.discographyPage;
-  const discographyPage =
-    typeof discographyPageRaw === 'string' ? Number(discographyPageRaw) : 1;
-  const page = Number.isFinite(discographyPage) && discographyPage > 0 ? discographyPage : 1;
-  return (
-    <DiscographyWidget
-      spotifyArtistId={spotifyArtistId}
-      page={page}
-      pageSize={5}
-    />
-  );
+  let trackIds = spotifyTrackIds;
+  if (trackIds.length === 0) {
+    const topTrackId = await getRandomTopTrackId(spotifyArtistId);
+    trackIds = topTrackId ? [topTrackId] : [];
+  }
+  if (trackIds.length > 0) {
+    return <SpotifyPlayer spotifyTrackIds={trackIds} />;
+  }
+  return null;
 }
 
 function resolveSupabasePublicObjectUrl(bucket: string, pathOrUrl: string | null | undefined) {
@@ -37,14 +36,7 @@ function resolveSupabasePublicObjectUrl(bucket: string, pathOrUrl: string | null
   return `${base}/storage/v1/object/public/${bucket}/${trimmed}`;
 }
 
-export default async function HomePage({
-  searchParams,
-}: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<
-    string,
-    string | string[] | undefined
-  >;
-}) {
+export default async function HomePage() {
   const profile = await getArtistProfile();
   if (!profile) {
     return (
@@ -54,19 +46,44 @@ export default async function HomePage({
     );
   }
 
-  const events = await getArtistEvents(profile.id);
-  const coverSrc = resolveSupabasePublicObjectUrl('artist-covers', profile.coverImagePath);
+  const [events, spotifyArtist] = await Promise.all([
+    getArtistEvents(profile.id),
+    getSpotifyArtist(profile.spotifyArtistId),
+  ]);
+
+  const coverSrc = profile.coverImagePath
+    ? resolveSupabasePublicObjectUrl('artist-covers', profile.coverImagePath)
+    : spotifyArtist?.imageUrl ?? null;
 
   return (
     <main className={styles.main}>
       <header className={styles.header}>
         <h1 className={styles.title}>{profile.name}</h1>
-        {profile.coverImagePath && (
+        {(coverSrc || profile.coverImagePath) && (
           <div className={styles.coverWrap}>
             {coverSrc ? (
               <img src={coverSrc} alt="Artist cover" className={styles.coverImg} />
             ) : (
               <div className={styles.coverPlaceholder}>Cover: {profile.coverImagePath}</div>
+            )}
+          </div>
+        )}
+        {(spotifyArtist?.followers != null || spotifyArtist?.spotifyUrl) && (
+          <div className={styles.spotifyMeta}>
+            {spotifyArtist.followers > 0 && (
+              <span className={styles.followers}>
+                {spotifyArtist.followers.toLocaleString()} followers
+              </span>
+            )}
+            {spotifyArtist.spotifyUrl && (
+              <a
+                href={spotifyArtist.spotifyUrl}
+                target="_blank"
+                rel="noreferrer"
+                className={styles.spotifyLink}
+              >
+                Listen on Spotify
+              </a>
             )}
           </div>
         )}
@@ -107,18 +124,21 @@ export default async function HomePage({
             themeSecondaryFontCssLink: profile.themeSecondaryFontCssLink,
           }}
           initialEvents={events}
+          initialSpotifyTrackIds={profile.spotifyTrackIds ?? []}
         />
       </Suspense>
 
       <Suspense fallback={<DiscographySkeleton />}>
-        <DiscographySection
-          searchParams={searchParams}
-          spotifyArtistId={profile.spotifyArtistId}
-        />
+        <DiscographyClient spotifyArtistId={profile.spotifyArtistId} />
       </Suspense>
 
-      {profile.spotifyPlaylistId && (
-        <SpotifyPlayer spotifyPlaylistId={profile.spotifyPlaylistId} />
+      {(profile.spotifyTrackIds?.length || profile.spotifyArtistId) && (
+        <Suspense fallback={null}>
+          <SpotifyPlayerSection
+            spotifyTrackIds={profile.spotifyTrackIds ?? []}
+            spotifyArtistId={profile.spotifyArtistId}
+          />
+        </Suspense>
       )}
     </main>
   );

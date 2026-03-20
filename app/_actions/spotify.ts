@@ -1,9 +1,6 @@
 'use server';
 
 import { unstable_cache } from 'next/cache';
-import { redirect } from 'next/navigation';
-import { prisma } from '@lib/prisma';
-import { requireAuth } from '@lib/auth';
 import { CACHE_LIFE, CACHE_TAGS } from '@lib/constants';
 
 type SpotifyTrack = {
@@ -12,7 +9,7 @@ type SpotifyTrack = {
   spotifyUrl: string;
 };
 
-type SpotifyRelease = {
+export type SpotifyRelease = {
   id: string;
   name: string;
   releaseType: string;
@@ -77,6 +74,51 @@ async function getSpotifyAccessToken(): Promise<string> {
 
   const data = (await res.json()) as { access_token: string; expires_in: number };
   return data.access_token;
+}
+
+export type SpotifyArtist = {
+  id: string;
+  name: string;
+  spotifyUrl: string;
+  followers: number;
+  imageUrl: string | null;
+};
+
+/**
+ * Fetches artist data from Spotify GET /artists/{id}.
+ */
+export async function getSpotifyArtist(
+  spotifyArtistId: string
+): Promise<SpotifyArtist | null> {
+  const cacheKey = ['spotify-artist', spotifyArtistId];
+  const tags = [`${CACHE_TAGS.SPOTIFY_DISCOGRAPHY}:${spotifyArtistId}`, 'spotify-artist'];
+
+  return unstable_cache(
+    async () => {
+      try {
+        const accessToken = await getSpotifyAccessToken();
+        const url = `https://api.spotify.com/v1/artists/${encodeURIComponent(spotifyArtistId)}`;
+        const res = await fetchJson<{
+          id: string;
+          name: string;
+          external_urls: { spotify: string };
+          followers: { total: number };
+          images: Array<{ url: string }>;
+        }>(url, accessToken);
+        return {
+          id: res.id,
+          name: res.name,
+          spotifyUrl: res.external_urls?.spotify ?? `https://open.spotify.com/artist/${res.id}`,
+          followers: res.followers?.total ?? 0,
+          imageUrl: res.images?.[0]?.url ?? null,
+        };
+      } catch {
+        return null;
+      }
+    },
+    cacheKey as string[],
+    { tags, revalidate: CACHE_LIFE.SPOTIFY.revalidate }
+  )();
 }
 
 export async function getDiscographyPage(params: {
@@ -181,84 +223,36 @@ export async function getDiscographyPage(params: {
   )();
 }
 
-// --- Playback (OAuth user token) ---
-
-const SPOTIFY_OAUTH_SCOPES =
-  'streaming user-modify-playback-state user-read-playback-state';
-
-async function getOwnedProfileOrThrow() {
-  const session = await requireAuth();
-  const profile = await prisma.artistProfile.findUnique({
-    where: { ownerUserId: session.user.id },
-  });
-  if (!profile) throw new Error('Artist profile not found for this user.');
-  return profile;
-}
-
 /**
- * Redirects the authenticated artist to Spotify OAuth to connect their account.
- * Call from a form action or from client after user click.
+ * Fetches a random track ID from the artist's discography (albums/EPs/singles).
+ * Used as fallback when spotifyTrackIds is empty. Uses albums endpoint instead of
+ * top-tracks to avoid 403 with client credentials.
  */
-export async function redirectToSpotifyConnect() {
-  const profile = await getOwnedProfileOrThrow();
-  const clientId = requireEnv('SPOTIFY_CLIENT_ID');
-  const appUrl = requireEnv('NEXT_PUBLIC_APP_URL');
-  const redirectUri = `${appUrl.replace(/\/$/, '')}/api/spotify/callback`;
-  const state = profile.id;
-  const authUrl = new URL('https://accounts.spotify.com/authorize');
-  authUrl.searchParams.set('client_id', clientId);
-  authUrl.searchParams.set('response_type', 'code');
-  authUrl.searchParams.set('redirect_uri', redirectUri);
-  authUrl.searchParams.set('scope', SPOTIFY_OAUTH_SCOPES);
-  authUrl.searchParams.set('state', state);
-  redirect(authUrl.toString());
-}
-
-/**
- * Returns a valid Spotify user access token for the Web Playback SDK.
- * Only for authenticated artist who has connected Spotify. Returns null otherwise.
- */
-export async function getSpotifyPlaybackToken(): Promise<{ accessToken: string } | null> {
+export async function getRandomTopTrackId(
+  spotifyArtistId: string
+): Promise<string | null> {
+  if (!spotifyArtistId?.trim()) return null;
   try {
-    const profile = await getOwnedProfileOrThrow();
-    const tokenRow = await prisma.spotifyToken.findFirst({
-      where: { artistProfileId: profile.id },
-    });
-    if (!tokenRow) return null;
-
-    const now = new Date();
-    const bufferMs = 60_000; // refresh 1 min before expiry
-    let accessToken = tokenRow.accessToken;
-    if (tokenRow.expiresAt.getTime() - bufferMs <= now.getTime()) {
-      const clientId = requireEnv('SPOTIFY_CLIENT_ID');
-      const clientSecret = requireEnv('SPOTIFY_CLIENT_SECRET');
-      const appUrl = requireEnv('NEXT_PUBLIC_APP_URL');
-      const redirectUri = `${appUrl.replace(/\/$/, '')}/api/spotify/callback`;
-
-      const res = await fetch('https://accounts.spotify.com/api/token', {
-        method: 'POST',
-        headers: {
-          Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          grant_type: 'refresh_token',
-          refresh_token: tokenRow.refreshToken,
-          redirect_uri: redirectUri,
-        }),
-        cache: 'no-store',
-      });
-
-      if (!res.ok) return null;
-      const data = (await res.json()) as { access_token: string; expires_in: number };
-      accessToken = data.access_token;
-      const expiresAt = new Date(Date.now() + data.expires_in * 1000);
-      await prisma.spotifyToken.update({
-        where: { id: tokenRow.id },
-        data: { accessToken, expiresAt },
-      });
-    }
-    return { accessToken };
+    const accessToken = await getSpotifyAccessToken();
+    const albumsUrl = `https://api.spotify.com/v1/artists/${encodeURIComponent(
+      spotifyArtistId
+    )}/albums?include_groups=album,ep,single&limit=10`;
+    const albumsRes = await fetchJson<{
+      items: Array<{ id: string }>;
+    }>(albumsUrl, accessToken);
+    const albums = albumsRes?.items ?? [];
+    if (albums.length === 0) return null;
+    const album = albums[Math.floor(Math.random() * albums.length)];
+    const tracksUrl = `https://api.spotify.com/v1/albums/${encodeURIComponent(
+      album.id
+    )}/tracks?limit=20`;
+    const tracksRes = await fetchJson<{
+      items: Array<{ id: string }>;
+    }>(tracksUrl, accessToken);
+    const tracks = tracksRes?.items ?? [];
+    if (tracks.length === 0) return null;
+    const track = tracks[Math.floor(Math.random() * tracks.length)];
+    return track?.id ?? null;
   } catch {
     return null;
   }

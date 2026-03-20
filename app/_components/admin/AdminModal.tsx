@@ -12,8 +12,9 @@ import {
   updateArtistDescriptionFromFormData,
   updateArtistEvent,
   updateArtistTheme,
+  addSpotifyTrackId,
+  removeSpotifyTrackId,
 } from '@actions/artist';
-import { redirectToSpotifyConnect } from '@actions/spotify';
 import { createSupabaseBrowserClient } from '@lib/supabase/client';
 import styles from './AdminModal.module.scss';
 
@@ -23,6 +24,7 @@ export default function AdminModal({
   initialCoverImagePath,
   initialTheme,
   initialEvents,
+  initialSpotifyTrackIds,
 }: {
   onClose: () => void;
   initialDescription: string;
@@ -35,6 +37,7 @@ export default function AdminModal({
     themeSecondaryFontCssLink: string;
   };
   initialEvents: ArtistEventPayload[];
+  initialSpotifyTrackIds: string[];
 }) {
   const [mounted, setMounted] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -239,6 +242,41 @@ export default function AdminModal({
                 </section>
 
                 <section className={styles.section}>
+                  <h3 className={styles.sectionTitle}>Spotify Player Tracks</h3>
+                  <p className={styles.muted}>
+                    Add Spotify track IDs or paste track URLs. One track is shown at random in the embed.
+                  </p>
+                  <form action={addSpotifyTrackId} className={styles.formRow}>
+                    <input
+                      name="trackId"
+                      type="text"
+                      placeholder="Paste track URL or 22-char ID"
+                      className={styles.input}
+                    />
+                    <button className={styles.primaryBtn} type="submit">
+                      Add
+                    </button>
+                  </form>
+                  {initialSpotifyTrackIds.length > 0 ? (
+                    <ul className={styles.ul}>
+                      {initialSpotifyTrackIds.map((id) => (
+                        <li key={id} className={styles.eventItem}>
+                          <span className={styles.trackId}>{id}</span>
+                          <form action={removeSpotifyTrackId}>
+                            <input type="hidden" name="trackId" value={id} />
+                            <button type="submit" className={styles.dangerBtn}>
+                              Remove
+                            </button>
+                          </form>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className={styles.muted}>No tracks yet.</p>
+                  )}
+                </section>
+
+                <section className={styles.section}>
                   <h3 className={styles.sectionTitle}>Theme</h3>
                   <form action={updateArtistTheme} className={styles.formGrid}>
                     <label className={styles.field}>
@@ -270,18 +308,6 @@ export default function AdminModal({
 
                     <button className={styles.primaryBtn} type="submit">
                       Save theme
-                    </button>
-                  </form>
-                </section>
-
-                <section className={styles.section}>
-                  <h3 className={styles.sectionTitle}>Spotify</h3>
-                  <p className={styles.muted}>
-                    Connect your Spotify account to enable in-page playback of your playlist (requires Spotify Premium).
-                  </p>
-                  <form action={redirectToSpotifyConnect}>
-                    <button className={styles.primaryBtn} type="submit">
-                      Connect Spotify
                     </button>
                   </form>
                 </section>

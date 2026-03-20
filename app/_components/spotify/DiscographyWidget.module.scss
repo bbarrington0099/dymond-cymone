@@ -140,3 +140,20 @@
   text-decoration: underline;
 }
 
+.sentinel {
+  min-height: 1px;
+  margin-top: var(--spacing-md);
+}
+
+.loadingMore {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+}
+
+@media (min-width: 720px) {
+  .loadingMore {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+

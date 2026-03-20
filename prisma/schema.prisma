@@ -26,6 +26,7 @@ model ArtistProfile {
   themeFavPath String
   spotifyArtistId String
   spotifyPlaylistId String
+  spotifyTrackIds String[] @default([])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
