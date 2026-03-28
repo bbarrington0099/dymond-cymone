@@ -7,7 +7,7 @@ import styles from './DiscographyWidget.module.scss';
 
 const PAGE_SIZE = 5;
 
-export default function DiscographyClient({
+export function DiscographyClient({
   spotifyArtistId,
 }: {
   spotifyArtistId: string;

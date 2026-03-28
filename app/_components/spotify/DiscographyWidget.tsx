@@ -3,7 +3,7 @@ import styles from './DiscographyWidget.module.scss';
 import type { DiscographyPage } from '@actions/spotify';
 import { getDiscographyPage } from '@actions/spotify';
 
-function DiscographySkeleton() {
+export function DiscographySkeleton() {
   return (
     <div className={styles.widget}>
       <div className={styles.header}>
@@ -24,7 +24,7 @@ function DiscographySkeleton() {
   );
 }
 
-export default async function DiscographyWidget({
+export async function DiscographyWidget({
   spotifyArtistId,
   page,
   pageSize = 5,
@@ -113,6 +113,3 @@ export default async function DiscographyWidget({
     </section>
   );
 }
-
-export { DiscographySkeleton };
-

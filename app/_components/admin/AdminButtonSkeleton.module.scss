@@ -1,0 +1,19 @@
+.fallbackOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-md);
+}
+
+.fallbackModal {
+    width: min(1100px, 100%);
+    background: var(--secondary-color, #fff);
+    border-radius: var(--radii-md);
+    padding: var(--spacing-md);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadows-lg);
+}

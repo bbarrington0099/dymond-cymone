@@ -1,0 +1,14 @@
+@forward '../../controls/AdminControls.module.scss';
+
+.section {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radii-md);
+  padding: var(--spacing-md);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.sectionTitle {
+  margin: 0 0 var(--spacing-sm);
+  color: var(--primary-color, #111);
+  font-size: 1.1rem;
+}

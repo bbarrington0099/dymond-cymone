@@ -79,7 +79,7 @@ export async function createArtistProfile(
                 themeSecondaryFontCssLink: userData.themeSecondaryFontCssLink,
                 themeFavPath: userData.themeFavPath,
                 spotifyArtistId: userData.spotifyArtistId,
-                spotifyPlaylistId: userData.spotifyPlaylistId,
+				spotifyTrackIds: userData.spotifyTrackIds,
             }
         });
     } catch (error: unknown) {

@@ -3,26 +3,27 @@
 import { unstable_cache } from 'next/cache';
 import { revalidateTag, revalidatePath } from 'next/cache';
 import { prisma } from '@lib/prisma';
+import { Prisma } from '@prismagen/client';
 import { CACHE_TAGS, CACHE_LIFE } from '@lib/constants';
 import { requireAuth } from '@lib/auth';
 import { redirect } from 'next/navigation';
 import { deleteStorageObject } from '@lib/supabase/storage-server';
+import { isSpotifyTrackIdArray, SpotifyTrackId } from '@lib/spotify';
 
 export type ArtistProfilePayload = {
   id: string;
   ownerUserId: string;
   name: string;
   description: string;
-  coverImagePath: string;
+  coverImagePath: string | null;
   themePrimaryColor: string;
   themeSecondaryColor: string;
   themeTertiaryColor: string;
   themePrimaryFontCssLink: string;
   themeSecondaryFontCssLink: string;
-  themeFavPath: string;
+  themeFavPath: string | null;
   spotifyArtistId: string;
-  spotifyPlaylistId: string;
-  spotifyTrackIds: string[];
+  spotifyTrackIds: Prisma.JsonArray;
 };
 
 export type ArtistEventPayload = {
@@ -46,11 +47,13 @@ export async function getArtistProfile(): Promise<ArtistProfilePayload | null> {
       const profile = await prisma.artistProfile.findFirst({
         orderBy: { createdAt: 'asc' },
       });
-      if (!profile) return null;
-      const p = profile as { spotifyTrackIds?: string[] };
+      if (!profile) {
+        throw new Error('Artist profile not found.');
+      };
+      const p = profile as { spotifyTrackIds: Prisma.JsonArray };
       return {
         ...profile,
-        spotifyTrackIds: p.spotifyTrackIds ?? [],
+        spotifyTrackIds: isSpotifyTrackIdArray(p.spotifyTrackIds) ? p.spotifyTrackIds : [] as SpotifyTrackId[],
       };
     },
     ['artist-profile'],
@@ -335,15 +338,22 @@ function parseSpotifyTrackId(input: string): string | null {
 
 export async function addSpotifyTrackId(formData: FormData) {
   const profile = await getOwnedProfileOrThrow();
-  const raw = String(formData.get('trackId') ?? '').trim();
-  const trackId = parseSpotifyTrackId(raw);
-  if (!trackId) throw new Error('Invalid track ID or URL. Use a Spotify track link or 22-character ID.');
 
-  const current = (profile.spotifyTrackIds ?? []) as string[];
-  if (current.includes(trackId)) return;
+  const rawTrackId = String(formData.get('trackId') ?? '').trim();
+  const rawWeight = String(formData.get('weight') ?? '1').trim();
+  const trackId = parseSpotifyTrackId(rawTrackId);
+  const weight = Number(rawWeight);
+
+  if (!trackId) throw new Error('Invalid track ID or URL. Use a Spotify track link or 22-character ID.');
+  if (rawWeight && (!Number.isFinite(weight) || weight <= 0)) {
+    throw new Error('weight must be a positive number.');
+  }
+
+  const current = (profile.spotifyTrackIds ?? []) as { id: string; weight: number }[];
+  if (current.some((t) => t.id === trackId)) return;
   await prisma.artistProfile.update({
     where: { ownerUserId: profile.ownerUserId },
-    data: { spotifyTrackIds: [...current, trackId] },
+    data: { spotifyTrackIds: [...current, { id: trackId, weight }] },
   });
   revalidateTag(CACHE_TAGS.ARTIST_PROFILE, 'max');
   revalidatePath('/');
@@ -355,7 +365,7 @@ export async function removeSpotifyTrackId(formData: FormData) {
   const trackId = String(formData.get('trackId') ?? '').trim();
   if (!trackId) throw new Error('trackId is required.');
 
-  const current = ((profile.spotifyTrackIds ?? []) as string[]).filter((id) => id !== trackId);
+  const current = ((profile.spotifyTrackIds ?? []) as { id: string; weight: number }[]).filter((t) => t.id !== trackId);
   await prisma.artistProfile.update({
     where: { ownerUserId: profile.ownerUserId },
     data: { spotifyTrackIds: current },

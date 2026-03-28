@@ -27,15 +27,15 @@ export async function seedArtistProfiles(): Promise<ArtistProfiles> {
                 name: DEFAULT_ARTIST_NAME,
                 plainPassword: DEFAULT_ARTIST_PASSWORD,
                 description: "Default artist profile",
-                coverImagePath: "default-cover.jpg",
+                coverImagePath: "",
                 themePrimaryColor: "#b603fc",
                 themeSecondaryColor: "#6603fc",
                 themeTertiaryColor: "#f0ed3a",
                 themePrimaryFontCssLink: "https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap",
                 themeSecondaryFontCssLink: "https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap",
-                themeFavPath: "default-favicon.ico",
+                themeFavPath: "",
                 spotifyArtistId: "4ElZsNwNPTrVPUWwM6KZb9",
-                spotifyPlaylistId: "5FG7UyhX6cLrGfb15Bl8y9",
+                spotifyTrackIds: {},
             }) ,
         }
     } catch (error) {

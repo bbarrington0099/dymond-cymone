@@ -1,0 +1,23 @@
+@forward '../controls/AdminControls.module.scss';
+
+.formRow {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-sm);
+}
+
+@media (min-width: 720px) {
+  .formGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .formGrid > button {
+    grid-column: 1 / -1;
+  }
+}

@@ -2,6 +2,7 @@
 
 import { unstable_cache } from 'next/cache';
 import { CACHE_LIFE, CACHE_TAGS } from '@lib/constants';
+import type { SpotifyTrackId } from '@lib/spotify';
 
 type SpotifyTrack = {
   id: string;
@@ -230,7 +231,7 @@ export async function getDiscographyPage(params: {
  */
 export async function getRandomTopTrackId(
   spotifyArtistId: string
-): Promise<string | null> {
+): Promise<SpotifyTrackId | null> {
   if (!spotifyArtistId?.trim()) return null;
   try {
     const accessToken = await getSpotifyAccessToken();
@@ -252,7 +253,7 @@ export async function getRandomTopTrackId(
     const tracks = tracksRes?.items ?? [];
     if (tracks.length === 0) return null;
     const track = tracks[Math.floor(Math.random() * tracks.length)];
-    return track?.id ?? null;
+    return { id: track?.id ?? null, weight: 1 };
   } catch {
     return null;
   }

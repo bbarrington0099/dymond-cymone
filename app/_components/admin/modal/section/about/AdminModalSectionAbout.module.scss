@@ -1,0 +1,54 @@
+@forward '../../AdminModal.module.scss';
+@forward '../../../controls/AdminControls.module.scss';
+
+.coverRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+@media (min-width: 720px) {
+  .coverRow {
+    grid-template-columns: 240px 1fr;
+    align-items: start;
+  }
+}
+
+.coverPreview {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radii-md);
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.coverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.coverEmpty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-color, #666);
+  font-size: 0.9rem;
+}
+
+.coverControls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.coverBtnRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}

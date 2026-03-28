@@ -17,16 +17,15 @@ model ArtistProfile {
   ownerUserId String @unique
   name String
   description String
-  coverImagePath String
+  coverImagePath String?
   themePrimaryColor String
   themeSecondaryColor String
   themeTertiaryColor String
   themePrimaryFontCssLink String
   themeSecondaryFontCssLink String
-  themeFavPath String
+  themeFavPath String?
   spotifyArtistId String
-  spotifyPlaylistId String
-  spotifyTrackIds String[] @default([])
+  spotifyTrackIds Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -40,16 +39,6 @@ model ArtistEvent {
   venue String
   locationText String
   imagePath String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model SpotifyToken {
-  id String @id @default(uuid())
-  artistProfileId String
-  refreshToken String
-  accessToken String
-  expiresAt DateTime
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

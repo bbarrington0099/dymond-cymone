@@ -1,12 +1,11 @@
 -- ============================================
--- RLS Policies for ArtistProfile, ArtistEvent, SpotifyToken
+-- RLS Policies for ArtistProfile, ArtistEvent
 -- Storage Policies for artist-covers, artist-event-thumbs, artist-favicons
 -- ============================================
 
 -- Enable RLS on tables
 ALTER TABLE IF EXISTS "ArtistProfile" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS "ArtistEvent" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS "SpotifyToken" ENABLE ROW LEVEL SECURITY;
 
 -- ----------------------------------------------------------------------------
 -- Helper functions (idempotent, now use text parameters and cast auth.uid() to text)
@@ -66,15 +65,6 @@ DROP POLICY IF EXISTS "ArtistEvent_write_authenticated" ON "ArtistEvent";
 CREATE POLICY "ArtistEvent_write_authenticated" ON "ArtistEvent"
   FOR ALL USING (can_modify_event(id))
   WITH CHECK (can_modify_event(id));  -- owner via profile
-
--- ----------------------------------------------------------------------------
--- SpotifyToken policies (strictly private, owner only)
--- ----------------------------------------------------------------------------
-
-DROP POLICY IF EXISTS "SpotifyToken_owner_only" ON "SpotifyToken";
-CREATE POLICY "SpotifyToken_owner_only" ON "SpotifyToken"
-  FOR ALL USING (is_owner_of_profile("artistProfileId"))
-  WITH CHECK (is_owner_of_profile("artistProfileId"));
 
 -- ----------------------------------------------------------------------------
 -- Storage buckets (public, with size limits)

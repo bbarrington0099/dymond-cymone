@@ -1,0 +1,23 @@
+.modal {
+  width: min(1100px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  background: var(--secondary-color, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: var(--radii-md);
+  box-shadow: var(--shadows-lg);
+  padding: var(--spacing-md);
+}
+
+.close {
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radii-md);
+  border: 1px solid var(--tertiary-color, #ddd);
+  background: transparent;
+  cursor: pointer;
+  color: var(--primary-color, #111);
+}
+
+.muted {
+  color: var(--primary-color, #666);
+}

@@ -1,40 +1,19 @@
+'use server';
+
 import { getArtistProfile, getArtistEvents } from '@actions/artist';
-import { getRandomTopTrackId, getSpotifyArtist } from '@actions/spotify';
-import styles from './page.module.scss';
+import { getSpotifyArtist } from '@actions/spotify';
+import { isSpotifyTrackIdArray, SpotifyTrackId } from '@lib/spotify';
+import {
+	SpotifyPlayerSection,
+	DiscographyClient,
+	DiscographySkeleton,
+  AdminGate,
+} from '@components/index';
+import { resolveSupabasePublicObjectUrl } from '@lib/supabase/storage-client';
 import { Suspense } from 'react';
-import AdminGate from '@components/admin/AdminGate';
 import { renderFormattedText } from '@lib/react/renderFormattedText';
-import DiscographyClient from '@components/spotify/DiscographyClient';
-import { DiscographySkeleton } from '@components/spotify/DiscographyWidget';
-import SpotifyPlayer from '@components/spotify/SpotifyPlayer';
 
-async function SpotifyPlayerSection({
-  spotifyTrackIds,
-  spotifyArtistId,
-}: {
-  spotifyTrackIds: string[];
-  spotifyArtistId: string;
-}) {
-  let trackIds = spotifyTrackIds;
-  if (trackIds.length === 0) {
-    const topTrackId = await getRandomTopTrackId(spotifyArtistId);
-    trackIds = topTrackId ? [topTrackId] : [];
-  }
-  if (trackIds.length > 0) {
-    return <SpotifyPlayer spotifyTrackIds={trackIds} />;
-  }
-  return null;
-}
-
-function resolveSupabasePublicObjectUrl(bucket: string, pathOrUrl: string | null | undefined) {
-  if (!pathOrUrl) return null;
-  const trimmed = pathOrUrl.trim();
-  if (!trimmed) return null;
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!base) return null;
-  return `${base}/storage/v1/object/public/${bucket}/${trimmed}`;
-}
+import styles from './page.module.scss';
 
 export default async function HomePage() {
   const profile = await getArtistProfile();
@@ -114,17 +93,19 @@ export default async function HomePage() {
 
       <Suspense fallback={null}>
         <AdminGate
-          initialDescription={profile.description}
-          initialCoverImagePath={profile.coverImagePath}
-          initialTheme={{
-            themePrimaryColor: profile.themePrimaryColor,
-            themeSecondaryColor: profile.themeSecondaryColor,
-            themeTertiaryColor: profile.themeTertiaryColor,
-            themePrimaryFontCssLink: profile.themePrimaryFontCssLink,
-            themeSecondaryFontCssLink: profile.themeSecondaryFontCssLink,
-          }}
-          initialEvents={events}
-          initialSpotifyTrackIds={profile.spotifyTrackIds ?? []}
+            adminProps={{
+              initialDescription: profile.description,
+              initialCoverImagePath: profile.coverImagePath,
+              initialTheme: {
+                themePrimaryColor: profile.themePrimaryColor,
+                themeSecondaryColor: profile.themeSecondaryColor,
+                themeTertiaryColor: profile.themeTertiaryColor,
+                themePrimaryFontCssLink: profile.themePrimaryFontCssLink,
+                themeSecondaryFontCssLink: profile.themeSecondaryFontCssLink,
+              },
+              initialEvents: events,
+              initialSpotifyTrackIds: profile.spotifyTrackIds ?? []
+            }}
         />
       </Suspense>
 
@@ -135,7 +116,7 @@ export default async function HomePage() {
       {(profile.spotifyTrackIds?.length || profile.spotifyArtistId) && (
         <Suspense fallback={null}>
           <SpotifyPlayerSection
-            spotifyTrackIds={profile.spotifyTrackIds ?? []}
+            spotifyTrackIds={isSpotifyTrackIdArray(profile.spotifyTrackIds) ? profile.spotifyTrackIds as SpotifyTrackId[] : [] as SpotifyTrackId[]}
             spotifyArtistId={profile.spotifyArtistId}
           />
         </Suspense>

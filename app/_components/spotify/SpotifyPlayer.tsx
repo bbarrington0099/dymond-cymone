@@ -1,17 +1,15 @@
 'use client';
 
 import { useMemo } from 'react';
+import type { SpotifyTrackId } from '@lib/spotify';
+import { pickRandomTrack } from '@lib/utils';
+
 import styles from './SpotifyPlayer.module.scss';
 
-function pickRandomTrack(trackIds: string[]): string | null {
-  if (!trackIds.length) return null;
-  return trackIds[Math.floor(Math.random() * trackIds.length)];
-}
-
-export default function SpotifyPlayer({
+export function SpotifyPlayer({
   spotifyTrackIds,
 }: {
-  spotifyTrackIds: string[];
+  spotifyTrackIds: SpotifyTrackId[];
 }) {
   const trackId = useMemo(() => pickRandomTrack(spotifyTrackIds), [spotifyTrackIds]);
 
