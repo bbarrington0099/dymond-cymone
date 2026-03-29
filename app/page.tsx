@@ -5,9 +5,12 @@ import { getSpotifyArtist } from '@actions/spotify';
 import { isSpotifyTrackIdArray, SpotifyTrackId } from '@lib/spotify';
 import {
 	SpotifyPlayerSection,
-	DiscographyClient,
-	DiscographySkeleton,
+	DiscographyWidget,
   AdminGate,
+  Img,
+  Link,
+  List,
+  ListItem,
 } from '@components/index';
 import { resolveSupabasePublicObjectUrl } from '@lib/supabase/storage-client';
 import { Suspense } from 'react';
@@ -41,7 +44,7 @@ export default async function HomePage() {
         {(coverSrc || profile.coverImagePath) && (
           <div className={styles.coverWrap}>
             {coverSrc ? (
-              <img src={coverSrc} alt="Artist cover" className={styles.coverImg} />
+              <Img src={coverSrc} alt="Artist cover" className={styles.coverImg} />
             ) : (
               <div className={styles.coverPlaceholder}>Cover: {profile.coverImagePath}</div>
             )}
@@ -55,14 +58,10 @@ export default async function HomePage() {
               </span>
             )}
             {spotifyArtist.spotifyUrl && (
-              <a
+              <Link
                 href={spotifyArtist.spotifyUrl}
-                target="_blank"
-                rel="noreferrer"
-                className={styles.spotifyLink}
-              >
-                Listen on Spotify
-              </a>
+                content="Listen on Spotify"
+              />
             )}
           </div>
         )}
@@ -76,18 +75,18 @@ export default async function HomePage() {
         {events.length === 0 ? (
           <p className={styles.empty}>No upcoming events.</p>
         ) : (
-          <ul className={styles.eventList}>
+          <List>
             {events.map((event) => (
-              <li key={event.id} className={styles.eventItem}>
+              <ListItem key={event.id}>
                 <strong>{event.title}</strong>
                 {' — '}
                 {new Date(event.eventDate).toLocaleDateString()}
                 {event.eventTime && ` ${event.eventTime}`}
                 {event.venue && ` @ ${event.venue}`}
                 {event.locationText && `, ${event.locationText}`}
-              </li>
+              </ListItem>
             ))}
-          </ul>
+          </List>
         )}
       </section>
 
@@ -109,8 +108,8 @@ export default async function HomePage() {
         />
       </Suspense>
 
-      <Suspense fallback={<DiscographySkeleton />}>
-        <DiscographyClient spotifyArtistId={profile.spotifyArtistId} />
+      <Suspense fallback={null}>
+        <DiscographyWidget spotifyArtistId={profile.spotifyArtistId} />
       </Suspense>
 
       {(profile.spotifyTrackIds?.length || profile.spotifyArtistId) && (

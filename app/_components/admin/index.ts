@@ -1,4 +1,3 @@
-export * from './controls';
 export * from './modal';
 export * from './AdminProps';
 export * from './AdminButton';

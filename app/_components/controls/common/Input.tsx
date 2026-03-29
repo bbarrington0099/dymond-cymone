@@ -1,7 +1,7 @@
 import React from 'react'
 import { classes } from '@lib/utils';
 
-import styles from '../AdminControls.module.scss';
+import styles from '../Controls.module.scss';
 
 interface InputProps {
     name: string;

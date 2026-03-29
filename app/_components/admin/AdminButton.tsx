@@ -2,8 +2,7 @@
 
 import { Suspense, lazy, useState } from 'react';
 import { AdminProps, AdminModal, AdminButtonSkeleton } from '@components/admin';
-
-import styles from './AdminButton.module.scss';
+import { Button } from '@components/controls';
 
 const AdminModalLazy = lazy(() => Promise.resolve({ default: AdminModal }));
 
@@ -15,9 +14,11 @@ export function AdminButton(props: AdminButtonProps) {
 
   return (
     <>
-      <button className={styles.button} type="button" onClick={() => setOpen(true)}>
-        Admin
-      </button>
+      <Button 
+        type="button" 
+        onClick={() => setOpen(true)}
+        content="Admin"
+      />
       {open && (
         <Suspense
           fallback={

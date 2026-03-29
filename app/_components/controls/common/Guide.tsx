@@ -2,7 +2,7 @@ import React from 'react';
 import { classes } from '@lib/utils';
 import { renderFormattedText } from '@lib/react/renderFormattedText';
 
-import styles from '../AdminControls.module.scss';
+import styles from '../Controls.module.scss';
 
 interface GuideProps {
     content: string;

@@ -1,6 +1,6 @@
 import React from 'react';
 
-import styles from '../AdminControls.module.scss';
+import styles from '../Controls.module.scss';
 
 interface ListItemProps {
     children: React.ReactNode;

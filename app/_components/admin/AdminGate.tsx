@@ -1,6 +1,7 @@
 import { auth } from '@lib/auth';
 import { logout } from '@actions/auth';
-import { AdminButton, AdminProps } from '@components/admin';
+import { AdminButton, AdminProps, AdminModalForm } from '@components/admin';
+import { Button } from '@components/controls';
 
 import styles from './AdminGate.module.scss';
 
@@ -16,11 +17,12 @@ export async function AdminGate(props: AdminGateProps) {
       <AdminButton
         adminProps={props.adminProps}
       />
-      <form action={logout}>
-        <button type="submit" className={styles.button}>
-          Logout
-        </button>
-      </form>
+      <AdminModalForm action={logout}>
+        <Button 
+          type="submit" 
+          content="Logout"
+        />
+      </AdminModalForm>
     </div>
   );
 }

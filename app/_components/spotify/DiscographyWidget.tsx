@@ -1,77 +1,105 @@
-import Link from 'next/link';
-import styles from './DiscographyWidget.module.scss';
-import type { DiscographyPage } from '@actions/spotify';
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
 import { getDiscographyPage } from '@actions/spotify';
+import { Img, Link, List, ListItem } from '@components/controls';
 
-export function DiscographySkeleton() {
-  return (
-    <div className={styles.widget}>
-      <div className={styles.header}>
-        <div className="skeleton" style={{ height: 22, width: 180 }} />
-        <div className="skeleton" style={{ height: 28, width: 130, borderRadius: 8 }} />
-      </div>
-      <div className={styles.grid}>
-        {Array.from({ length: 5 }).map((_, idx) => (
-          <div key={idx} className={styles.card}>
-            <div className={styles.art} />
-            <div className="skeleton" style={{ height: 16, width: '80%', marginTop: 10 }} />
-            <div className="skeleton" style={{ height: 12, width: '60%', marginTop: 6 }} />
-            <div className="skeleton" style={{ height: 12, width: '70%', marginTop: 6 }} />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+import type { SpotifyRelease } from '@actions/spotify';
 
-export async function DiscographyWidget({
-  spotifyArtistId,
-  page,
-  pageSize = 5,
-}: {
+import styles from './DiscographyWidget.module.scss';
+
+interface DiscographyWidgetProps {
   spotifyArtistId: string;
-  page: number;
-  pageSize?: number;
-}) {
-  const data: DiscographyPage = await getDiscographyPage({
-    spotifyArtistId,
-    page,
-    pageSize,
-    tracksPerRelease: 3,
-  });
+}
+export function DiscographyWidget(props: DiscographyWidgetProps) {
+  const { spotifyArtistId } = props;
+
+  const [releases, setReleases] = useState<SpotifyRelease[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const loadingMoreRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getDiscographyPage({
+      spotifyArtistId,
+      page: 1,
+    }).then((result) => {
+      if (!cancelled) {
+        setReleases(result.releases);
+        setTotalPages(Math.max(1, result.totalPages));
+        setPage(1);
+        setLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [spotifyArtistId]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || loading || page >= totalPages) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (!entry?.isIntersecting || loadingMoreRef.current) return;
+        const nextPage = page + 1;
+        if (nextPage > totalPages) return;
+        loadingMoreRef.current = true;
+        setLoadingMore(true);
+        getDiscographyPage({
+          spotifyArtistId,
+          page: nextPage,
+        }).then((result) => {
+          setReleases((prev) => [...prev, ...result.releases]);
+          setPage(nextPage);
+          loadingMoreRef.current = false;
+          setLoadingMore(false);
+        }).catch(() => {
+          loadingMoreRef.current = false;
+          setLoadingMore(false);
+        });
+      },
+      { rootMargin: '100px', threshold: 0.1 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [spotifyArtistId, page, totalPages, loading]);
+
+  if (loading && releases.length === 0) {
+    return (
+      <section className={styles.widget} aria-label="Discography">
+        <div className={styles.header}>
+          <h2 className={styles.title}>Discography</h2>
+        </div>
+        <div className={styles.grid}>
+          {Array.from({ length: 5 }).map((_, idx) => (
+            <div key={idx} className={styles.card}>
+              <div className={styles.art} />
+              <div className="skeleton" style={{ height: 16, width: '80%', marginTop: 10 }} />
+              <div className="skeleton" style={{ height: 12, width: '60%', marginTop: 6 }} />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className={styles.widget} aria-label="Discography">
       <div className={styles.header}>
         <h2 className={styles.title}>Discography</h2>
-
-        <div className={styles.pager}>
-          {data.page > 1 ? (
-            <Link className={styles.pagerBtn} href={`/?discographyPage=${data.page - 1}`}>
-              Prev
-            </Link>
-          ) : (
-            <span className={styles.pagerBtnDisabled}>Prev</span>
-          )}
-          <span className={styles.pagerText}>
-            Page {data.page} / {Math.max(1, data.totalPages)}
-          </span>
-          {data.page < data.totalPages ? (
-            <Link className={styles.pagerBtn} href={`/?discographyPage=${data.page + 1}`}>
-              Next
-            </Link>
-          ) : (
-            <span className={styles.pagerBtnDisabled}>Next</span>
-          )}
-        </div>
       </div>
-
       <div className={styles.grid}>
-        {data.releases.map((release) => (
+        {releases.map((release) => (
           <div key={release.id} className={styles.card}>
             <div className={styles.artWrap}>
               {release.albumArtUrl ? (
-                <img
+                <Img
                   src={release.albumArtUrl}
                   alt={`${release.name} cover`}
                   className={styles.art}
@@ -80,36 +108,42 @@ export async function DiscographyWidget({
                 <div className={styles.artFallback} />
               )}
             </div>
-
             <div className={styles.cardBody}>
-              <a
+              <Link
                 href={release.spotifyUrl}
-                target="_blank"
-                rel="noreferrer"
                 className={styles.releaseLink}
-              >
-                {release.name}
-              </a>
+                content={release.name}
+              />
               <div className={styles.releaseType}>{release.releaseType}</div>
-
-              <ul className={styles.tracks}>
+              <List>
                 {release.tracks.map((t) => (
-                  <li key={t.id} className={styles.trackItem}>
-                    <a
+                  <ListItem key={t.id}>
+                    <Link
                       href={t.spotifyUrl}
-                      target="_blank"
-                      rel="noreferrer"
                       className={styles.trackLink}
-                    >
-                      {t.name}
-                    </a>
-                  </li>
+                      content={t.name}
+                    />
+                  </ListItem>
                 ))}
-              </ul>
+              </List>
             </div>
           </div>
         ))}
       </div>
+      {page < totalPages && (
+        <div ref={sentinelRef} className={styles.sentinel}>
+          {loadingMore && (
+            <div className={styles.loadingMore}>
+              {Array.from({ length: 3 }).map((_, idx) => (
+                <div key={idx} className={styles.card}>
+                  <div className={styles.art} />
+                  <div className="skeleton" style={{ height: 16, width: '80%', marginTop: 10 }} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }

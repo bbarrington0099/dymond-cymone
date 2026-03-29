@@ -125,12 +125,10 @@ export async function getSpotifyArtist(
 export async function getDiscographyPage(params: {
   spotifyArtistId: string;
   page: number;
-  pageSize?: number;
-  tracksPerRelease?: number;
 }): Promise<DiscographyPage> {
   const spotifyArtistId = params.spotifyArtistId;
-  const pageSize = params.pageSize ?? 5;
-  const tracksPerRelease = params.tracksPerRelease ?? 3;
+  const pageSize = 5;
+  const tracksPerRelease = 3;
 
   const page = Math.max(1, Number.isFinite(params.page) ? params.page : 1);
 
